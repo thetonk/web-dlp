@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Welcome to yt-dlp web ui!</title>
+        <link rel="stylesheet" href="resources/styles/styles.css">
+        <link rel="icon" href="resources/images/ytdlpicon.ico">
+        <meta charset="UTF-8">
+        <meta name="author" content="Spyros Baltsas">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="keywords" content="yt-dlp, youtube mp3 downloader, video downloader">
+    </head>
+
+    <body>
+        
+        <div>
+            <img src ="https://raw.githubusercontent.com/yt-dlp/yt-dlp/master/.github/banner.svg" alt="yt-dlp">
+        </div>
+        
+        <div>
+            Please enter link(s): You can see the list of supported platforms <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">here.</a>
+            Note that mp3 files will be downloaded by default.
+        </div>
+        <div>
+            <textarea rows="5" name="links"></textarea>
+        </div>
+
+        <form>
+            <span>
+                <label><input type="checkbox" name="check">Enable multithread</label>
+                <label><input type="checkbox" name="checkNC">Transfer to nextcloud</label>
+                <label><input type="checkbox" name="containVideo">MP4 Video</label>
+            </span>
+            
+        </form>
+        
+        <div>
+            <button id="submitButton" onclick="runProcess();">Download!</button> 
+        </div>
+        <img id="loading" src="resources/images/cupertino_activity_indicator.gif" alt="loading icon">
+        
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+        
+        <script type="text/javascript" charset="utf-8">
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+            function runProcess(){
+                document.getElementById("loading").style.display = "block";
+                let button = document.getElementById("submitButton");
+                button.style.display = "none";
+                socket.emit("start-process", {links: document.getElementsByName("links")[0].value, 
+                    check: document.getElementsByName("check")[0].checked,
+                    checkNC: document.getElementsByName("checkNC")[0].checked,
+                    containVideo: document.getElementsByName("containVideo")[0].checked
+                    }
+                )
+            }
+            socket.on('processing-finished', (data) => {
+                console.log("ok!");
+                //alert(JSON.parse(data).data);
+                window.location.href = '/success';
+                }
+            )
+            socket.on('processing-failed', () => {
+                console.log("NOT ok!");
+                //alert(JSON.parse(data).data);
+                window.location.href = '/error';
+                }
+            )
+        </script>
+
+    </body>
+
+</html>

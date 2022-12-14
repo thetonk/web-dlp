@@ -1,0 +1,21 @@
+version : "3"
+
+services:
+  web:
+      container_name: ytdlpweb
+      image : ytdlpweb:latest
+
+      ports:
+        - "6030:6030"
+        
+      environment:
+        TZ: "Athens/Greece"
+        OCC_PATH: "/var/www/html/nextcloud/occ"
+        NC_USER: "spyros"
+        NC_MUSIC_DIRECTORY: "Music"
+      
+      volumes:
+        - /var/www/html/nextcloud/data/spyros/files/Music:/ytdlpFolder/Library
+        - /dockerData/ytdlpweb/config:/config
+      
+      restart: unless-stopped
