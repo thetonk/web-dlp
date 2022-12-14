@@ -1,4 +1,18 @@
 # Web-dlp
+
+<!--- BEGIN SHIELDS.IO --->
+![python-3.9](https://img.shields.io/badge/python-v3.9-blue?style=flat-square&logo=python)
+![Linux](https://img.shields.io/badge/os-linux-blueviolet?style=flat-square)
+![LicenseGPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)
+![maintained](https://img.shields.io/badge/maintained%3F-yes-green?style=flat-square)
+![flask](https://img.shields.io/badge/flask-2.0.2-green?style=flat-square&logo=flask)
+<br>
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+<br>
+![Black-magic](https://img.shields.io/badge/powered%20with-black%20magic-purple?style=for-the-badge)
+<!--- END SHIELDS.IO --->
+
+
 ![web-dlp](Images/web-dlp.png "web-dlp screenshot")
 A simple web interface for [yt-dlp](https://github.com/yt-dlp/yt-dlp), with extra compatibility for [Nextcloud](https://nextcloud.com/) file system and [Nextcloud Music](https://nextcloud.com/) app.
 
