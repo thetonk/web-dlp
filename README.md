@@ -5,7 +5,7 @@ A simple web interface for [yt-dlp](https://github.com/yt-dlp/yt-dlp), with extr
 ## Features
 - All video sources within the official [list](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) are supported.
 - Mass download videos and convert to either mp3 or mp4 format at the best quality possible.
-- Transfer downloads to your local nextcloud instance and update all the required databases automatically.
+- Transfer music to your local nextcloud instance and update all the required databases automatically.
 - Multi-threading support.
 - Easy deployment with docker.
 
