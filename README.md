@@ -14,7 +14,7 @@
 
 
 ![web-dlp](Images/web-dlp.png "web-dlp screenshot")
-A simple web interface for [yt-dlp](https://github.com/yt-dlp/yt-dlp), with extra compatibility for [Nextcloud](https://nextcloud.com/) file system and [Nextcloud Music](https://nextcloud.com/) app.
+A simple web interface for [yt-dlp](https://github.com/yt-dlp/yt-dlp), with extra compatibility for [Nextcloud](https://nextcloud.com/) file system and [Nextcloud Music](https://apps.nextcloud.com/apps/music) app.
 
 ## Features
 - All video sources within the official [list](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) are supported.
@@ -45,12 +45,12 @@ This project requires 2 volumes;
 ```
 
 ## (Optional) Transferring to Nextcloud
-This is the kinda tricky part, but rewarding. It may get automated on future releases. The steps are as such:
+This is the kinda tricky part, but rewarding. It may get automatized on future releases. The steps are as such:
 1. Go to the config folder and create a [FIFO file](https://man7.org/linux/man-pages/man7/fifo.7.html) aka pipe, named _mypipe_ (use name AS IS). Provide root priviledges if needed. This pipe will be the communication between the container and the host system.
 
 ```shell
-# cd /dockerData/ytdlpweb/config
-# mkfifo mypipe
+$ cd /dockerData/ytdlpweb/config
+$ mkfifo mypipe
 ```
 2. Create a script that forever reads the pipe and make it executable. For extra security, create it as root.
 ```sh
@@ -80,5 +80,5 @@ $ docker build -t ytdlpweb .
 3. Deploy the previously created image using the properly configured _docker-compose.yml_ file
 
 ```sh
-$ docker compose up
+$ docker compose up -d
 ```
