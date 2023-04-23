@@ -20,21 +20,19 @@
             Please enter link(s): You can see the list of supported platforms <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">here.</a>
             Note that mp3 files will be downloaded by default.
         </div>
-        <div>
-            <textarea rows="5" name="links"></textarea>
-        </div>
-
-        <form>
+        <form action="/select-resolution" method="post">
+            <textarea rows="5" name="links"></textarea> <br>
             <span>
                 <label><input type="checkbox" name="check">Enable multithread</label>
                 <label><input type="checkbox" name="checkNC">Transfer to nextcloud</label>
                 <label><input type="checkbox" name="containVideo">MP4 Video</label>
             </span>
             
+            <button type="submit">Show formats!</button>
         </form>
-        
+        <br>
         <div>
-            <button id="submitButton" onclick="runProcess();">Download!</button> 
+            <button id="submitButton" onclick="runProcess();">Download all!</button> 
         </div>
         <img id="loading" src="resources/images/cupertino_activity_indicator.gif" alt="loading icon">
         
@@ -56,7 +54,7 @@
             socket.on('processing-finished', (data) => {
                 console.log("ok!");
                 //alert(JSON.parse(data).data);
-                window.location.href = '/success';
+                window.location.href = '/success?zip=1';
                 }
             )
             socket.on('processing-failed', () => {

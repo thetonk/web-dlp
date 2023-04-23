@@ -1,0 +1,5 @@
+*.json
+__pycache__/
+test.py
+*.old
+scripts/ytdlpDownloader.sh

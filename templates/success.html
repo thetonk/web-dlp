@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>web-dlp: Success!</title>
+        <link rel="icon" href="{{ url_for('static', filename='resources/images/ytdlpicon.ico') }}">
+        <meta charset="UTF-8">
+        <meta name="author" content="Spyros Baltsas">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body{
+                background-color: rgba(15.7, 15.7, 15.7,0.85);
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 1.2em;
+                color: white;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Success!</h1>
+        {% if zip == 1 %}
+            <p>Files downloaded and saved! You can click <a href="/download?zip=1">here</a> to download your media!</p>
+        {% else %}
+            <p>Video "{{ filename }}" downloaded and saved! You can click <a href="/download?zip=0">here</a> to download it!</p>
+        {% endif %}
+        <a href="/">Return to main page.</a>
+    </body>
+</html>
