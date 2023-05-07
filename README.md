@@ -28,7 +28,7 @@ A simple web interface for [yt-dlp](https://github.com/yt-dlp/yt-dlp), with extr
 Set to your preferred port. Default port is **6030**.
 ### II. Environment variables
 Environment variables. They are pretty self-explanatory.
-- `TZ` : Sets your timezone
+- `TZ` : Sets your timezone, using the corresponding TZ identifier from [this list](https://en.m.wikipedia.org/wiki/List_of_tz_database_time_zones/).
 - `OCC_PATH`: Your path to the nextcloud occ script
 - `NC_USER` : Your nextcloud user
 - `NC_MUSIC_DIRECTORY`: Your nextcloud music directory path, as shown to your nextcloud instance

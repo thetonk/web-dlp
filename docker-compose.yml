@@ -9,7 +9,7 @@ services:
         - "6030:6030"
         
       environment:
-        TZ: "Athens/Greece"
+        TZ: "Europe/Athens"
         OCC_PATH: "/var/www/html/nextcloud/occ"
         NC_USER: "spyros"
         NC_MUSIC_DIRECTORY: "Music"

@@ -229,4 +229,4 @@ def dl(jsonobj):
         emptyOutputFolder()
 
 #app.run("0.0.0.0", port=5000)
-socketio.run(app, "0.0.0.0", 6030)
+socketio.run(app, "0.0.0.0", 6030, allow_unsafe_werkzeug=True)
