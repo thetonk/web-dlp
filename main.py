@@ -1,13 +1,16 @@
 from flask import Flask, after_this_request, send_file, render_template, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_socketio import SocketIO
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 from multimedia_processor import Format, Video
-import threading, json, os, shutil, subprocess, re
+import threading, json, os, shutil, subprocess, re, logging
 
 app = Flask(__name__, static_url_path="", static_folder="web", template_folder="templates")
+#this is to fix the client ip addresses on flask logs behind reverse proxy, to use the XFF header instead
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1,x_host=1)
+app.logger.setLevel(logging.DEBUG)
 socketio = SocketIO(app)
-
 def convertToMP4(input: str, output: str):
     subprocess.call(f"ffmpeg -i \"{input}\" -map 0 -c copy \"{output}\"", shell=True)
 
@@ -45,7 +48,7 @@ def youtubeDownload(links : list, checked : bool, transfertoNC : bool, video : b
 
     with YoutubeDL(ydl_options) as ydl:
         if checked:
-            print("MULTITHREADING!")
+            app.logger.info("MULTITHREADING!")
             threads = []
             for link in links:
                 thread = threading.Thread(target=ydl.download, args=(link,))
@@ -61,7 +64,7 @@ def youtubeDownload(links : list, checked : bool, transfertoNC : bool, video : b
                 if not file.endswith(".mp4"):
                     #start conversion with ffmpeg
                     path = f"web/outputs/{file}"
-                    print(path)
+                    app.logger.info(f"path: {path}")
                     convertToMP4(path, f"web/outputs/{os.path.splitext(file)[0]}.mp4")
                     os.remove(path)
     
@@ -75,6 +78,7 @@ def youtubeDownload(links : list, checked : bool, transfertoNC : bool, video : b
     
 @app.route("/")
 def home():
+    app.logger.info(request.headers)
     return send_file("web/index.html")
 
 @app.route("/success")
@@ -94,21 +98,21 @@ def download():
         @after_this_request
         def removefiles(response):
             os.remove("web/downloads/out.zip")
-            print(response)
+            app.logger.info(response)
             return response
         return send_file("web/downloads/out.zip", as_attachment=True)
     else:
         @after_this_request
         def removefiles(response):
             os.remove("web/downloads/out.mp4")
-            print(response)
+            app.logger.info(response)
             return response
         return send_file(f"web/downloads/out.mp4", as_attachment=True)
 
 @app.route("/select-resolution", methods=["GET","POST"])
 def res():
     links = request.form['links'].split()
-    print(links[0])
+    app.logger.info(f"{links[0]}")
     resolutions = []
     title = None
     thumbnail = None
@@ -120,7 +124,7 @@ def res():
     if 'title' in vinfo:
         title = vinfo['title']
     if 'formats' in vinfo:
-        print("FORMATS FOUND")
+        app.logger.info("FORMATS FOUND!")
         formats = vinfo["formats"]
         for format in formats:
             id = format["format_id"]
@@ -148,14 +152,14 @@ def res():
             if 'filesize_approx' in format:
                 filesize = format["filesize_approx"]
             f = Format(id, url,ext,res,filesize,video_ext,audio_ext, acodec, vcodec,container)
-            print(f.stringify())
+            app.logger.info(f.stringify())
             k = f.getResolution() #width x height
             if k not in resolutions and k is not None:
                 if int(k[1]) >= 144: #clear storyline thumbnails
                     resolutions.append(k)
             #print(k)
     elif 'entries' in vinfo:
-        print("ENTRY FOUND")
+        app.logger.info("ENTRY FOUND!")
         entry = vinfo['entries'][0]
         id = entry['id']
         url = entry["url"]
@@ -165,34 +169,33 @@ def res():
         if 'thumbnail' in entry:
             thumbnail  = entry['thumbnail']
         fo = Format(id,url,ext,resolution,size)
-        print(fo.stringify())
+        app.logger.info(fo.stringify())
         k = fo.getResolution() #width x height
         if k not in resolutions and k is not None:
             if int(k[1]) >= 144:
                 resolutions.append(k)
         #print(k)
     video = Video(title, links[0],resolutions, thumbnail)
-    print(video.TITLE,video.URL, video.RESOLUTIONS, video.THUMBNAIL)
+    app.logger.info(f"TITLE: {video.TITLE}, URL: {video.URL}, RESOLUTIONS: {video.RESOLUTIONS}, THUMBNAIL: {video.THUMBNAIL}")
     return render_template("resolutions.html",video=video)
 
 @socketio.on("start-process")
 def fun(jsonobj):
-    print(jsonobj)
-    print(type(jsonobj))
+    app.logger.info(f"{jsonobj} of type {type(jsonobj)}")
     try:
         links = jsonobj["links"].split()
         youtubeDownload(links, jsonobj["check"], jsonobj["checkNC"], jsonobj["containVideo"])
         socketio.emit('processing-finished', json.dumps({'data': 'finished processing!'}))
     
     except DownloadError as d:
-        print(d)
+        app.logger.error(d)
         socketio.emit("processing-failed")
 
 @socketio.on("start-res-dl")
 def dl(jsonobj):
     height = int(jsonobj['h'])
     url = jsonobj['url']
-    print(height,url)
+    app.logger.info(f"Downloading resolution height {height} from URL {url}")
     ydl_opts = {"format":f"bestvideo[height={height}]+bestaudio", "outtmpl": "web/outputs/out.%(ext)s", "progress_hooks":[progressHook]}
     try:
         with YoutubeDL(ydl_opts) as ydl:
@@ -209,7 +212,7 @@ def dl(jsonobj):
 
     except DownloadError:
         try:
-            print("Downloading fallback video and audio combined")
+            app.logger.info("Downloading fallback video and audio combined")
             ydl_opts = {"format":f"best[height={height}]", "outtmpl": "web/outputs/out.%(ext)s", "progress_hooks":[progressHook]}
             with YoutubeDL(ydl_opts) as ydl:
                 ydl.download(url)
@@ -223,10 +226,16 @@ def dl(jsonobj):
                     shutil.move(os.path.join(workingDir,path), os.path.join(workingDir,"web/downloads"))
                 socketio.emit('processing-finished', json.dumps({'data': 'finished processing!'}))
         except Exception as e:
-            print(e)
+            app.logger.error(e)
             socketio.emit("processing-failed")
     finally:
         emptyOutputFolder()
 
 #app.run("0.0.0.0", port=5000)
-socketio.run(app, "0.0.0.0", 6030, allow_unsafe_werkzeug=True)
+if not os.path.isdir("web/outputs"):
+    app.logger.info("creating outputs directory")
+    os.mkdir("web/outputs")
+if not os.path.isdir("web/downloads"):
+    app.logger.info("creating downloads directory")
+    os.mkdir("web/downloads")
+socketio.run(app,"0.0.0.0", 6030,log_output=True)

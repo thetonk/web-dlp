@@ -5,7 +5,7 @@
 ![Linux](https://img.shields.io/badge/os-linux-blueviolet?style=flat-square)
 ![LicenseGPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)
 ![maintained](https://img.shields.io/badge/maintained%3F-yes-green?style=flat-square)
-![flask](https://img.shields.io/badge/flask-2.0.2-green?style=flat-square&logo=flask)
+![flask](https://img.shields.io/badge/flask-2.3.2-green?style=flat-square&logo=flask)
 <br>
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 <br>

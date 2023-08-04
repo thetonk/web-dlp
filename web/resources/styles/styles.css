@@ -15,13 +15,14 @@ form{
     align-items: center;
     flex-direction: column;
 }
-
-div{
+div:not(.modaldivs){
     text-align: center;
     margin-right: auto;
     margin-left: auto;
 }
-
+.modaltext{
+    color:black;
+}
 input[type=submit], button{
     background-color: rgb(28, 118, 8);
     color:whitesmoke;
@@ -60,7 +61,7 @@ img{
         margin-right: 10px;
     }
 
-    div{
+    div:not(.modaldivs){
         margin-bottom: 2.5%;
     }
 
@@ -95,7 +96,7 @@ img{
         margin-right: 10px;
     }
 
-    div{
+    div:not(.modaldivs){
         margin-bottom: 4%;
         margin-right: auto;
         margin-left: auto;
