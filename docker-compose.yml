@@ -1,21 +1,60 @@
 version : "3"
 
 services:
+  redis:
+      container_name: redis
+      image: redis:latest
+      restart: always
+      ports:
+        - 6379:6379
+      environment:
+        TZ: "Europe/Athens"
+      command: redis-server --save 20 1 --loglevel warning --requirepass YOUR-REDIS-PASS
+      volumes:
+        - redis-data:/data
   web:
       container_name: ytdlpweb
       image : ytdlpweb:latest
-
       ports:
         - "6030:6030"
-        
       environment:
         TZ: "Europe/Athens"
         OCC_PATH: "/var/www/html/nextcloud/occ"
         NC_USER: "spyros"
         NC_MUSIC_DIRECTORY: "Music"
-      
+        FLASK_SECRET_KEY: "your-secret-key"
+        REDIS_HOST: "redis"
+        REDIS_PASSWORD: "YOUR-REDIS-PASS"
+        REDIS_PORT: "6379"
       volumes:
         - /var/www/html/nextcloud/data/spyros/files/Music:/ytdlpFolder/Library
         - /dockerData/ytdlpweb/config:/config
-      
+        - ytdlpweb-data:/ytdlpFolder/web
+      depends_on:
+        - redis
       restart: unless-stopped
+  worker:
+      container_name: ytdlpweb-worker
+      image: ytdlpweb:latest
+      # just in case
+      environment:
+        TZ: "Europe/Athens"
+        OCC_PATH: "/var/www/html/nextcloud/occ"
+        NC_USER: "spyros"
+        NC_MUSIC_DIRECTORY: "Music"
+        FLASK_SECRET_KEY: "your-secret-key"
+        REDIS_HOST: "redis"
+        REDIS_PASSWORD: "YOUR-REDIS-PASS"
+        REDIS_PORT: "6379"
+      #start celery worker
+      command: celery -A main.celery worker --loglevel=info
+      volumes:
+        - /var/www/html/nextcloud/data/spyros/files/Music:/ytdlpFolder/Library
+        - /dockerData/ytdlpweb/config:/config
+        - ytdlpweb-data:/ytdlpFolder/web
+      depends_on:
+        - redis
+        - web
+volumes:
+  redis-data:
+  ytdlpweb-data:

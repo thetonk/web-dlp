@@ -4,13 +4,25 @@ from flask_socketio import SocketIO
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 from multimedia_processor import Format, Video
-import threading, json, os, shutil, subprocess, re, logging
+from functools import partial #this is the first time im using this, seems promising!
+from celery import Celery
+import json, os, shutil, subprocess, re, logging
 
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD","redis-password")
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = os.getenv("REDIS_PORT", 6379)
 app = Flask(__name__, static_url_path="", static_folder="web", template_folder="templates")
 #this is to fix the client ip addresses on flask logs behind reverse proxy, to use the XFF header instead
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1,x_host=1)
 app.logger.setLevel(logging.DEBUG)
 socketio = SocketIO(app)
+app.config['SECRET_KEY'] = os.getenv("FLASK_SECRET_KEY","my-secret-key")
+#celery config
+app.config['CELERY_BROKER_URL'] = os.getenv("CELERY_BROKER_URL",f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0')
+app.config['CELERY_RESULT_BACKEND'] = os.getenv("CELERY_RESULT_BACKEND",f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0')
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
+
 def convertToMP4(input: str, output: str):
     subprocess.call(f"ffmpeg -i \"{input}\" -map 0 -c copy \"{output}\"", shell=True)
 
@@ -18,13 +30,14 @@ def emptyOutputFolder():
     for file in os.listdir("web/outputs"): #cleanup outputs folder
         os.remove("web/outputs/"+file)
 
-def progressHook(d):
-    if d["status"] == "downloading":
-        percent_color = d["_percent_str"]
+def progressHook(task, downloadStatus):
+    if downloadStatus["status"] == "downloading":
+        percent_color = downloadStatus["_percent_str"]
         percentage = re.findall("\d+\.\d+%", percent_color)[0] #clear coloring
-        socketio.emit("progress-update", percentage)
-    
-def youtubeDownload(links : list, checked : bool, transfertoNC : bool, video : bool):
+        task.update_state(state="PROGRESS", meta={"percent":percentage})
+
+@celery.task(bind=True)
+def videoDownload(self, links : list, checked : bool, transfertoNC : bool, video : bool):
     if video:
         ydl_options = {
             "outtmpl" : "web/outputs/%(title)s.%(ext)s",
@@ -45,20 +58,12 @@ def youtubeDownload(links : list, checked : bool, transfertoNC : bool, video : b
                 {'key': 'FFmpegMetadata'},
             ]
         }
-
-    with YoutubeDL(ydl_options) as ydl:
-        if checked:
-            app.logger.info("MULTITHREADING!")
-            threads = []
+    self.update_state(state="PROGRESS", meta={"info": "started downloading!"})
+    try:
+        with YoutubeDL(ydl_options) as ydl:
             for link in links:
-                thread = threading.Thread(target=ydl.download, args=(link,))
-                thread.start()
-                threads.append(thread)
-            for thread in threads:
-                thread.join()
-        else:
-            ydl.download(links)
-        
+                ydl.download(link)
+                self.update_state(state="PROGRESS", meta={"info":f"{link} downloaded successfully!"})
         if video:
             for file in os.listdir("web/outputs"):
                 if not file.endswith(".mp4"):
@@ -67,15 +72,65 @@ def youtubeDownload(links : list, checked : bool, transfertoNC : bool, video : b
                     app.logger.info(f"path: {path}")
                     convertToMP4(path, f"web/outputs/{os.path.splitext(file)[0]}.mp4")
                     os.remove(path)
-    
-    shutil.make_archive("web/downloads/out", "zip", "web/outputs")
+                    self.update_state(state="PROGRESS", meta={"info":f"{file} converted to mp4!"})
 
-    if transfertoNC and not video:
-        #os.system('scripts/finalizer.sh ') subprocess, better
-        subprocess.call("scripts/finalizer.sh", shell=True)
+        shutil.make_archive("web/downloads/out", "zip", "web/outputs")
 
-    emptyOutputFolder()
-    
+        if transfertoNC and not video:
+            #os.system('scripts/finalizer.sh ') subprocess, better
+            subprocess.call("scripts/finalizer.sh", shell=True)
+            self.update_state(state="PROGRESS", meta={"info": "Files transferred to nextcloud!"})
+        return {"status":"completed"}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        emptyOutputFolder()
+
+@celery.task(bind=True)
+def resolutionDownload(self, url, height):
+    print(f"Downloading resolution height {height} from URL {url}")
+    partial_progressHook = partial(progressHook,self)
+    ydl_opts = {"format":f"bestvideo[height={height}]+bestaudio", "outtmpl": "web/outputs/out.%(ext)s", "progress_hooks":[partial_progressHook]}
+    self.update_state(state="PROGRESS", meta={"info":"started download!"})
+    try:
+        with YoutubeDL(ydl_opts) as ydl:
+            ydl.download(url)
+            self.update_state(state="PROGRESS",meta={"info": "download complete"})
+        file = os.listdir("web/outputs")[0]
+        path = f"web/outputs/{file}"
+        if not file.endswith(".mp4"):
+            convertToMP4(path, "web/downloads/out.mp4")
+            self.update_state(state="PROGRESS", meta={"info":"convert finished"})
+        else:
+            #in order to move and replace the file if already exists, absolute path must be provided.
+            workingDir = os.getcwd()
+            shutil.move(os.path.join(workingDir,path), os.path.join(workingDir,"web/downloads"))
+        return {"status": "completed"}
+
+    except DownloadError:
+        try:
+            print("Downloading fallback video and audio combined")
+            ydl_opts = {"format":f"best[height={height}]", "outtmpl": "web/outputs/out.%(ext)s", "progress_hooks":[progressHook]}
+            with YoutubeDL(ydl_opts) as ydl:
+                ydl.download(url)
+                self.update_state(state="PROGRESS",meta={"info": "download complete"})
+            file = os.listdir("web/outputs")[0]
+            path = f"web/outputs/{file}"
+            if not file.endswith(".mp4"):
+                convertToMP4(path, "web/downloads/out.mp4")
+                self.update_state(state="PROGRESS", meta={"info":"convert finished"})
+            else:
+                #in order to move and replace the file if already exists, absolute path must be provided.
+                workingDir = os.getcwd()
+                shutil.move(os.path.join(workingDir,path), os.path.join(workingDir,"web/downloads"))
+            return {"status": "completed"}
+        except Exception as e:
+            return {"error": f"{e}"}
+    except Exception as e:
+        return {"error": f"{e}"}
+    finally:
+        emptyOutputFolder()
+
 @app.route("/")
 def home():
     app.logger.info(request.headers)
@@ -182,54 +237,38 @@ def res():
 @socketio.on("start-process")
 def fun(jsonobj):
     app.logger.info(f"{jsonobj} of type {type(jsonobj)}")
-    try:
-        links = jsonobj["links"].split()
-        youtubeDownload(links, jsonobj["check"], jsonobj["checkNC"], jsonobj["containVideo"])
+    links = jsonobj["links"].split()
+    downloadTask = videoDownload.apply_async(args=[links, jsonobj["check"], jsonobj["checkNC"], jsonobj["containVideo"]])
+    while not downloadTask.ready():
+        print("Download status ", downloadTask.status)
+        #return control to flask server, prevent freezing
+        socketio.sleep(1)
+    if downloadTask.info.get("error") is None:
+        status = downloadTask.info.get("status")
+        app.logger.info(f"[{status}] ")
         socketio.emit('processing-finished', json.dumps({'data': 'finished processing!'}))
-    
-    except DownloadError as d:
-        app.logger.error(d)
+    else:
+        print(downloadTask.info.get("error"))
         socketio.emit("processing-failed")
 
 @socketio.on("start-res-dl")
 def dl(jsonobj):
     height = int(jsonobj['h'])
     url = jsonobj['url']
-    app.logger.info(f"Downloading resolution height {height} from URL {url}")
-    ydl_opts = {"format":f"bestvideo[height={height}]+bestaudio", "outtmpl": "web/outputs/out.%(ext)s", "progress_hooks":[progressHook]}
-    try:
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.download(url)
-            file = os.listdir("web/outputs")[0]
-            path = f"web/outputs/{file}"
-            if not file.endswith(".mp4"):
-                convertToMP4(path, "web/downloads/out.mp4")
-            else:
-                #in order to move and replace the file if already exists, absolute path must be provided.
-                workingDir = os.getcwd()
-                shutil.move(os.path.join(workingDir,path), os.path.join(workingDir,"web/downloads"))
-            socketio.emit('processing-finished', json.dumps({'data': 'finished processing!'}))
-
-    except DownloadError:
-        try:
-            app.logger.info("Downloading fallback video and audio combined")
-            ydl_opts = {"format":f"best[height={height}]", "outtmpl": "web/outputs/out.%(ext)s", "progress_hooks":[progressHook]}
-            with YoutubeDL(ydl_opts) as ydl:
-                ydl.download(url)
-                file = os.listdir("web/outputs")[0]
-                path = f"web/outputs/{file}"
-                if not file.endswith(".mp4"):
-                    convertToMP4(path, "web/downloads/out.mp4")
-                else:
-                    #in order to move and replace the file if already exists, absolute path must be provided.
-                    workingDir = os.getcwd()
-                    shutil.move(os.path.join(workingDir,path), os.path.join(workingDir,"web/downloads"))
-                socketio.emit('processing-finished', json.dumps({'data': 'finished processing!'}))
-        except Exception as e:
-            app.logger.error(e)
-            socketio.emit("processing-failed")
-    finally:
-        emptyOutputFolder()
+    downloadTask = resolutionDownload.apply_async(args=[url, height])
+    while not downloadTask.ready():
+        print("Download status", downloadTask.status)
+        if downloadTask.info is not None:
+            if downloadTask.info.get("percent") is not None:
+                percent = downloadTask.info.get("percent")
+                socketio.emit("progress-update", percent)
+        #return control to flask server, prevent freezing
+        socketio.sleep(1)
+    if downloadTask.info.get("error") is None:
+        socketio.emit('processing-finished', json.dumps({'data': 'finished processing!'}))
+    else:
+        print(downloadTask.info.get("error"))
+        socketio.emit("processing-failed")
 
 #app.run("0.0.0.0", port=5000)
 if not os.path.isdir("web/outputs"):
@@ -238,4 +277,6 @@ if not os.path.isdir("web/outputs"):
 if not os.path.isdir("web/downloads"):
     app.logger.info("creating downloads directory")
     os.mkdir("web/downloads")
-socketio.run(app,"0.0.0.0", 6030,log_output=True)
+
+if __name__ == "__main__":
+    socketio.run(app,"0.0.0.0", 6030,log_output=True)

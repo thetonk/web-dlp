@@ -6,4 +6,5 @@ Flask==2.3.2
 eventlet==0.33.3
 simple-websocket
 yt-dlp
-
+celery
+redis

@@ -25,7 +25,7 @@
         <form action="/select-resolution" method="post" onsubmit="return validation();">
             <textarea rows="5" name="links"></textarea> <br>
             <span>
-                <label><input type="checkbox" name="check">Enable multithread</label>
+                <!--<label><input type="checkbox" name="check">Enable multithread</label> TEMPORARILY UNAVAILABLE-->
                 <label><input type="checkbox" name="checkNC">Transfer to nextcloud</label>
                 <label><input type="checkbox" name="containVideo">MP4 Video</label>
             </span>
@@ -61,8 +61,8 @@
                     document.getElementById("loading").style.display = "block";
                     let button = document.getElementById("submitButton");
                     button.style.display = "none";
-                    socket.emit("start-process", {links: document.getElementsByName("links")[0].value, 
-                        check: document.getElementsByName("check")[0].checked,
+                    socket.emit("start-process", {links: document.getElementsByName("links")[0].value,
+                        check: false,
                         checkNC: document.getElementsByName("checkNC")[0].checked,
                         containVideo: document.getElementsByName("containVideo")[0].checked
                         }

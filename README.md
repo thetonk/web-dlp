@@ -20,7 +20,7 @@ A simple web interface for [yt-dlp](https://github.com/yt-dlp/yt-dlp), with extr
 - All video sources within the official [list](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) are supported.
 - Mass download videos and convert to either mp3 or mp4 format at the best quality possible.
 - Transfer music to your local nextcloud instance and update all the required databases automatically.
-- Multi-threading support.
+- ~~Multi-threading support~~ Temporarily not available, currently under development. Previous implementation had issue when processing big files.
 - Easy deployment with docker.
 
 ## Configuring the docker-compose.yml file
@@ -32,6 +32,10 @@ Environment variables. They are pretty self-explanatory.
 - `OCC_PATH`: Your path to the nextcloud occ script
 - `NC_USER` : Your nextcloud user
 - `NC_MUSIC_DIRECTORY`: Your nextcloud music directory path, as shown to your nextcloud instance
+- `FLASK_SECRET_KEY`: A secret key for flask. Required for various security reasons. You **must** change that
+- `REDIS_HOST`: Hostname or IP Address for redis. It's not required to change that for most cases, keep the value of [docker-compose file](docker-compose.yml).
+- `REDIS_PASSWORD`: Password for redis database. You **must** change that too.
+- `REDIS_PORT`: Port for redis. No need to change that, just like `REDIS_HOST`.
 
 ### III. Volumes
 This project requires 2 volumes;
