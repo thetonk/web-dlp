@@ -14,20 +14,25 @@
 
 
 ![web-dlp](Images/web-dlp.png "web-dlp screenshot")
+
 A simple web interface for [yt-dlp](https://github.com/yt-dlp/yt-dlp), with extra compatibility for [Nextcloud](https://nextcloud.com/) file system and [Nextcloud Music](https://apps.nextcloud.com/apps/music) app.
 
 ## Features
 - All video sources within the official [list](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) are supported.
 - Mass download videos and convert to either mp3 or mp4 format at the best quality possible.
+- Select resolution for single videos.
 - Transfer music to your local nextcloud instance and update all the required databases automatically.
 - ~~Multi-threading support~~ Temporarily not available, currently under development. Previous implementation had issue when processing big files.
 - Easy deployment with docker.
 
 ## Configuring the docker-compose.yml file
+
 ### I. Ports
 Set to your preferred port. Default port is **6030**.
+
 ### II. Environment variables
 Environment variables. They are pretty self-explanatory.
+
 - `TZ` : Sets your timezone, using the corresponding TZ identifier from [this list](https://en.m.wikipedia.org/wiki/List_of_tz_database_time_zones/).
 - `OCC_PATH`: Your path to the nextcloud occ script
 - `NC_USER` : Your nextcloud user

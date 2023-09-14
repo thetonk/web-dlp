@@ -110,7 +110,7 @@ def resolutionDownload(self, url, height):
     except DownloadError:
         try:
             print("Downloading fallback video and audio combined")
-            ydl_opts = {"format":f"best[height={height}]", "outtmpl": "web/outputs/out.%(ext)s", "progress_hooks":[progressHook]}
+            ydl_opts = {"format":f"best[height={height}]", "outtmpl": "web/outputs/out.%(ext)s", "progress_hooks":[partial_progressHook]}
             with YoutubeDL(ydl_opts) as ydl:
                 ydl.download(url)
                 self.update_state(state="PROGRESS",meta={"info": "download complete"})
