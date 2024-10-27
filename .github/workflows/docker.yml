@@ -36,7 +36,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           platforms: ${{matrix.platform}}
-          push: true
           tags: ${{env.PROJECT}}:latest
           context: .
           outputs: type=image,name=${{ env.PROJECT }},push-by-digest=true,name-canonical=true,push=true
