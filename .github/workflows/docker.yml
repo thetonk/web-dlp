@@ -26,7 +26,7 @@ jobs:
           username: ${{secrets.DOCKERHUB_USERNAME}}
           password: ${{secrets.DOCKERHUB_TOKEN}}
       - name: build and push to dockerhub
-        uses: docker/docker/build-push-action@v6
+        uses: docker/build-push-action@v6
         with:
           platforms: ${{matrix.platform}}
           push: true
