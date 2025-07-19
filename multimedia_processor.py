@@ -15,7 +15,7 @@ class Format():
     
     def getResolution(self):
         if self.RESOLUTION is not None:
-            sizes = re.findall("\d+",self.RESOLUTION)
+            sizes = re.findall(r"\d+",self.RESOLUTION)
             print(sizes)
             if len(sizes) >= 2:
                 width = sizes[0]  #sugar, i know
@@ -54,4 +54,3 @@ class Video():
         self.URL = URL
         self.RESOLUTIONS = resolutions
         self.THUMBNAIL = thumbnail
-    

@@ -33,7 +33,7 @@ def emptyOutputFolder():
 def progressHook(task, downloadStatus):
     if downloadStatus["status"] == "downloading":
         percent_color = downloadStatus["_percent_str"]
-        percentage = re.findall("\d+\.\d+%", percent_color)[0] #clear coloring
+        percentage = re.findall(r"\d+\.\d+%", percent_color)[0] #clear coloring
         task.update_state(state="PROGRESS", meta={"percent":percentage})
 
 @celery.task(bind=True)
@@ -279,4 +279,4 @@ if not os.path.isdir("web/downloads"):
     os.mkdir("web/downloads")
 
 if __name__ == "__main__":
-    socketio.run(app,"0.0.0.0", 6030,log_output=True)
+    socketio.run(app,"0.0.0.0", 6030, log_output=True, allow_unsafe_werkzeug=True)

@@ -1,7 +1,7 @@
 # Web-dlp
 
 <!--- BEGIN SHIELDS.IO --->
-![python-3.9](https://img.shields.io/badge/python-v3.9-blue?style=flat-square&logo=python)
+![python-3.9](https://img.shields.io/badge/python-v3.13-blue?style=flat-square&logo=python)
 ![Linux](https://img.shields.io/badge/os-linux-blueviolet?style=flat-square)
 ![LicenseGPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)
 ![maintained](https://img.shields.io/badge/maintained%3F-yes-green?style=flat-square)
