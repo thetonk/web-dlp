@@ -77,7 +77,6 @@ def videoDownload(self, links : list, checked : bool, transfertoNC : bool, video
         shutil.make_archive("web/downloads/out", "zip", "web/outputs")
 
         if transfertoNC and not video:
-            #os.system('scripts/finalizer.sh ') subprocess, better
             subprocess.call("scripts/finalizer.sh", shell=True)
             self.update_state(state="PROGRESS", meta={"info": "Files transferred to nextcloud!"})
         return {"status":"completed"}
