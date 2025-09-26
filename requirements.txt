@@ -5,6 +5,6 @@ Werkzeug==2.3.3
 Flask==2.3.2
 eventlet==0.33.3
 simple-websocket
-yt-dlp
+yt-dlp==2025.9.23
 celery==5.3.4
 redis
